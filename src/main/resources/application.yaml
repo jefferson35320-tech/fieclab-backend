@@ -7,7 +7,7 @@ spring:
   datasource:
     # URL de conexão com o banco de dados
     # Altere 'localhost:3306/nome_do_seu_banco' para os seus dados
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3310}/fiecLab?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/fiecLab?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
 
     # Credenciais de acesso
     username: ${DB_USER:root}

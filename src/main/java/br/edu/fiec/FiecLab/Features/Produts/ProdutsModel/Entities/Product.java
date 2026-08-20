@@ -21,24 +21,18 @@ public class Product {
     private UUID id;
 
     @Column(nullable = false)
-    private String name;
+    private String nome;
 
     @Column(nullable = false)
-    private Double price;
+    private Double preco;
 
-    private String description;
+    private String descricao;
 
-    private String imageUrl;
+    private String imagem_em_texto;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProductType type;
+    private ProductType tipo_de_Produto;
 
-    private Integer batch;
-
-    private LocalDate mfgDate;
-
-    private LocalDate expDate;
-
-    private Integer supplierId;
+    private Integer estoque;
 }
