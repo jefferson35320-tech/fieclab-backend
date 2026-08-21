@@ -7,6 +7,8 @@ import br.edu.fiec.FiecLab.Features.User.Models.Entities.User;
 import br.edu.fiec.FiecLab.Features.User.repository.UserRepository;
 import br.edu.fiec.FiecLab.Features.User.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -57,5 +59,11 @@ public class UserServiceImpl implements UserService {
 
     public List<User> FindAllUsers(){
         return userRepository.findAll();
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        return userRepository.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado com o email: " + username));
     }
 }
