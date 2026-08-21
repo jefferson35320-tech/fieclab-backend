@@ -3,7 +3,12 @@ package br.edu.fiec.FiecLab.Features.User.Models.Entities;
 import br.edu.fiec.FiecLab.Features.User.Models.DTO.UserDTO;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -12,7 +17,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "Users")
-public class User {
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue
@@ -30,10 +35,22 @@ public class User {
 
     String fcmToken;
 
+    Role position;
+
     public User(String fcmToken, UserDTO userDTO) {
         this.name = userDTO.getName();
         this.email = userDTO.getEmail();
         this.password = userDTO.getPassword();
         this.fcmToken = userDTO.getFcmToken();
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority(position.getAuthority()));
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
     }
 }
