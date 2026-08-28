@@ -7,6 +7,7 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
+  # Job 1: Build Java e Testes
   build-and-test:
     runs-on: ubuntu-latest
 
@@ -15,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configurar Java JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -27,5 +28,48 @@ jobs:
       - name: Compilar e empacotar projeto
         run: ./mvnw clean package -DskipTests
 
-      - name: Testar build da imagem Docker
-        run: docker build . --file Dockerfile
+  # Job 2: Build e Push da Imagem Docker para o Docker Hub
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    # Executa apenas nos pushes das branches principais (evita dar push em PRs)
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Login no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build e Push da Imagem Docker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:${{ github.sha }}
+
+  # Job 3: Deploy na instância EC2
+  deploy-ec2:
+    runs-on: self-hosted
+    needs: docker-build
+    if: github.event_name == 'push'
+    steps:
+      - name: Atualizar e Subir Container do Backend
+        run: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:latest
+          docker stop fieclab-backend || true
+          docker rm fieclab-backend || true
+          docker run -d \
+            --name fieclab-backend \
+            --restart always \
+            -p 8080:8080 \
+            ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:latest
