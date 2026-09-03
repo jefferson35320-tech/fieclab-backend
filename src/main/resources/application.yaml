@@ -4,33 +4,46 @@ spring:
 
   main:
     allow-bean-definition-overriding: true
+
   datasource:
     # URL de conexão com o banco de dados
-    # Altere 'localhost:3306/nome_do_seu_banco' para os seus dados
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3310}/fiecLab?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
 
     # Credenciais de acesso
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:1234}
 
-    # Classe do Driver (Opcional a partir do Spring Boot 2.x, mas boa prática manter)
+    # Classe do Driver
     driver-class-name: com.mysql.cj.jdbc.Driver
 
     # Configurações do Pool de Conexões (HikariCP)
     hikari:
       pool-name: HikariPool-MySQL
-      maximum-pool-size: 10          # Máximo de conexões ativas simultâneas
-      minimum-idle: 5                # Mínimo de conexões ociosas mantidas no pool
-      idle-timeout: 600000           # Tempo máximo (ms) que uma conexão pode ficar ociosa (10 min)
-      max-lifetime: 1800000          # Vida máxima (ms) de uma conexão no pool (30 min)
-      connection-timeout: 30000      # Tempo máximo (ms) de espera por uma conexão (30 seg)
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 30000
 
-  # Configurações do Hibernate / JPA (Opcional, mas muito comum)
+  # Configurações do Hibernate / JPA
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update               # Altere para 'validate' ou 'none' em produção!
-    show-sql: true                   # Exibe os comandos SQL no console (bom para desenvolvimento)
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
-        format_sql: true             # Formata o SQL no console para ficar legível
+        format_sql: true
+
+  # Configuração OAuth2
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
