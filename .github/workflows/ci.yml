@@ -57,19 +57,24 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:latest
             ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:${{ github.sha }}
 
-  # Job 3: Deploy na instância EC2
-  deploy-ec2:
+  # Job 3: Deploy no Kubernetes (minikube local, via runner self-hosted)
+  deploy-k8s:
     runs-on: self-hosted
     needs: docker-build
     if: github.event_name == 'push'
     steps:
-      - name: Atualizar e Subir Container do Backend
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Verificar se o minikube está rodando
         run: |
-          docker pull ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:latest
-          docker stop fieclab-backend || true
-          docker rm fieclab-backend || true
-          docker run -d \
-            --name fieclab-backend \
-            --restart always \
-            -p 8080:8080 \
-            ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:latest
+          minikube status || (echo "::error::minikube não está rodando. Rode 'minikube start' antes." && exit 1)
+
+      - name: Aplicar manifests no Kubernetes
+        run: kubectl apply -f deployment.yaml
+
+      - name: Forçar novo rollout do backend (garante que a imagem :latest nova seja puxada)
+        run: kubectl rollout restart deployment/backend
+
+      - name: Aguardar rollout concluir
+        run: kubectl rollout status deployment/backend --timeout=180s
