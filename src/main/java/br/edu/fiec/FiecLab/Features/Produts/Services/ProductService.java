@@ -4,10 +4,16 @@ import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.DTO.ProductDTO;
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Product;
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.ProductType;
 import br.edu.fiec.FiecLab.Features.Produts.Repositories.ProductRepository;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -16,9 +22,15 @@ import java.util.UUID;
 public class ProductService {
 
     private final ProductRepository repository;
+    private final Path uploadDir = Paths.get("uploads");
 
     public ProductService(ProductRepository repository) {
         this.repository = repository;
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            throw new RuntimeException("Não foi possível criar o diretório para upload de arquivos", e);
+        }
     }
 
     public Page<ProductDTO> findAll(Pageable pageable) {
@@ -33,7 +45,7 @@ public class ProductService {
 
     public ProductDTO create(ProductDTO dto) {
         Product product = toEntity(dto);
-        product.setId(null); // garante que é sempre uma criação, ignorando id vindo do body
+        product.setId(null);
         return toDTO(repository.save(product));
     }
 
@@ -71,6 +83,44 @@ public class ProductService {
 
         return repository.findProductsByCriteria(name, type, minPrice, maxPrice, expDateBefore, pageable)
                 .map(this::toDTO);
+    }
+
+    public ProductDTO uploadImage(UUID id, MultipartFile file) {
+        Product product = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
+
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("O arquivo enviado está vazio.");
+        }
+
+        try {
+            // Gera um nome base único para as imagens
+            String baseFileName = UUID.randomUUID() + ".jpg";
+
+            // Caminhos de saída para o disco local
+            Path mainImagePath = this.uploadDir.resolve(baseFileName);
+            Path thumbImagePath = this.uploadDir.resolve("thumb_" + baseFileName);
+
+            // 1. Gera e salva a imagem padrão (600x600 em formato JPG)
+            Thumbnails.of(file.getInputStream())
+                    .size(600, 600)
+                    .outputFormat("jpg")
+                    .toFile(mainImagePath.toFile());
+
+            // 2. Gera e salva o thumbnail (150x150 em formato JPG)
+            Thumbnails.of(file.getInputStream())
+                    .size(150, 150)
+                    .outputFormat("jpg")
+                    .toFile(thumbImagePath.toFile());
+
+            // Salva apenas o nome base da imagem no atributo imageUrl do produto
+            product.setImageUrl(baseFileName);
+
+            return toDTO(repository.save(product));
+
+        } catch (IOException ex) {
+            throw new RuntimeException("Falha ao processar e armazenar as imagens do produto: " + ex.getMessage(), ex);
+        }
     }
 
     private ProductDTO toDTO(Product product) {
