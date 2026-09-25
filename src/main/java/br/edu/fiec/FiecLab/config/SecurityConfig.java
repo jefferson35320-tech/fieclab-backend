@@ -48,6 +48,10 @@ public class SecurityConfig {
                                 // Rotas de autenticação da aplicação
                                 "/api/v1/auth/**",
 
+                                // Rota pública de imagens (liberando a leitura do endpoint do FileController)
+                                "/images/**",
+                                "/api/files/**",
+
                                 // Rotas do OAuth2
                                 "/oauth2/**",
                                 "/login/**",

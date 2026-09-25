@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -77,4 +78,17 @@ public class ProductController {
         ProductDTO updatedProduct = service.uploadImage(id, file);
         return ResponseEntity.ok(updatedProduct);
     }
+
+    @GetMapping("/{id}/image")
+    public ResponseEntity uploadImagem(@PathVariable UUID id) {
+        // Sem implementação
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<ProductDTO>> uploadCsv(@RequestParam("file") MultipartFile file) {
+        List<ProductDTO> createdProducts = service.parseAndSaveCsv(file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdProducts);
+    }
+
 }
