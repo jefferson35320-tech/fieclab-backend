@@ -1,80 +1,268 @@
-name: CI Backend FiecLab
+# =========================================================================
+# deployment.yaml — FiecLab (Backend + Frontend + MySQL)
+# Aplique com: kubectl apply -f deployment.yaml
+# =========================================================================
 
-on:
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+# -------------------------------------------------------------------------
+# ConfigMap: configurações do banco de dados (host, porta, usuário, senha,
+# nome do banco). Compartilhado pelo MySQL e pelo Backend.
+# Obs: por simplicidade está tudo num ConfigMap (inclusive a senha). Para um
+# ambiente mais real, o ideal é mover DB_USER/DB_PASSWORD para um Secret.
+# -------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fieclab-config
+data:
+  DB_HOST: "mysql-service"
+  DB_PORT: "3306"
+  DB_NAME: "fiecLab"
+  DB_USER: "fieclab_user"
+  DB_PASSWORD: "fieclab_pass123"
+  MYSQL_ROOT_PASSWORD: "rootpassword123"
 
-jobs:
-  # Job 1: Build Java e Testes
-  build-and-test:
-    runs-on: ubuntu-latest
+---
+# -------------------------------------------------------------------------
+# MySQL: Deployment + Service
+# (necessário porque o backend precisa de um banco pra se conectar)
+# -------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate   # evita 2 pods de banco escrevendo no mesmo storage ao mesmo tempo
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: fieclab-config
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: fieclab-config
+                  key: DB_NAME
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: fieclab-config
+                  key: DB_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: fieclab-config
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
 
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
 
-      - name: Configurar Java JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: maven
+---
+# -------------------------------------------------------------------------
+# Backend: Deployment + Service + HPA
+# -------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: SEU_USUARIO_DOCKERHUB/fieclab-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: fieclab-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: fieclab-config
+                  key: DB_PORT
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: fieclab-config
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: fieclab-config
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          # Probe TCP simples: o projeto não tem o Spring Boot Actuator no pom.xml
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 20
 
-      - name: Dar permissão de execução ao Maven Wrapper
-        run: chmod +x mvnw
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
 
-      - name: Compilar e empacotar projeto
-        run: ./mvnw clean package -DskipTests
+---
+# HPA do backend (requer: minikube addons enable metrics-server)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
 
-  # Job 2: Build e Push da Imagem Docker para o Docker Hub
-  docker-build:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    # Executa apenas nos pushes das branches principais (evita dar push em PRs)
-    if: github.event_name == 'push'
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
+---
+# -------------------------------------------------------------------------
+# Frontend: Deployment + Service + HPA
+# -------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: SEU_USUARIO_DOCKERHUB/fiecpa2026:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 20
 
-      - name: Login no Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+  type: NodePort
 
-      - name: Configurar Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build e Push da Imagem Docker
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:latest
-            ${{ secrets.DOCKER_USERNAME }}/fieclab-backend:${{ github.sha }}
-
-  # Job 3: Deploy no Kubernetes (minikube local, via runner self-hosted)
-  deploy-k8s:
-    runs-on: self-hosted
-    needs: docker-build
-    if: github.event_name == 'push'
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      - name: Verificar se o minikube está rodando
-        run: |
-          minikube status || (echo "::error::minikube não está rodando. Rode 'minikube start' antes." && exit 1)
-
-      - name: Aplicar manifests no Kubernetes
-        run: kubectl apply -f deployment.yaml
-
-      - name: Forçar novo rollout do backend (garante que a imagem :latest nova seja puxada)
-        run: kubectl rollout restart deployment/backend
-
-      - name: Aguardar rollout concluir
-        run: kubectl rollout status deployment/backend --timeout=180s
+---
+# HPA do frontend (requer: minikube addons enable metrics-server)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
