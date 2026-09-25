@@ -72,8 +72,8 @@ jobs:
       - name: Aplicar manifests no Kubernetes
         run: kubectl apply -f deployment.yaml
 
-      - name: Forçar novo rollout do backend (garante que a imagem :latest nova seja puxada)
-        run: kubectl rollout restart deployment/backend
+      - name: Forçar novo rollout do backend
+        run: kubectl rollout restart deployment/backend-deployment
 
       - name: Aguardar rollout concluir
-        run: kubectl rollout status deployment/backend --timeout=180s
+        run: kubectl rollout status deployment/backend-deployment --timeout=180s
