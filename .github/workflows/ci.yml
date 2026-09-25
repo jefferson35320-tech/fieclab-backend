@@ -111,7 +111,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: SEU_USUARIO_DOCKERHUB/fieclab-backend:latest
+          image: fieclab/fieclab-backend:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -210,7 +210,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: SEU_USUARIO_DOCKERHUB/fiecpa2026:latest
+          image: fieclab/fiecpa2026:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
