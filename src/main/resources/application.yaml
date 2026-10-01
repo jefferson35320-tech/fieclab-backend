@@ -4,6 +4,7 @@ spring:
 
   main:
     allow-bean-definition-overriding: true
+
   datasource:
     # URL de conexão com o banco de dados
     # Altere 'localhost:3306/nome_do_seu_banco' para os seus dados
@@ -34,3 +35,7 @@ spring:
     properties:
       hibernate:
         format_sql: true             # Formata o SQL no console para ficar legível
+
+app:
+  firebase:
+    credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
