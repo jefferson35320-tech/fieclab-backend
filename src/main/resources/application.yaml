@@ -52,3 +52,15 @@ spring:
               - openid
               - profile
               - email
+management:
+  server:
+    port: 9090          # porta separada, só acessível dentro do cluster
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
