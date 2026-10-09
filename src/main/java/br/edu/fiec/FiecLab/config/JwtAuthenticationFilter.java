@@ -44,7 +44,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         jwt = authHeader.substring(7); // Remove "Bearer "
-        userEmail = jwtService.extractUsername(jwt); // Extrai o email do token
+
+        try {
+            userEmail = jwtService.extractUsername(jwt);
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+            filterChain.doFilter(request, response);   // segue sem autenticar
+            return;
+        } // Extrai o email do token
 
         // Se o email foi extraído e o usuário ainda não está autenticado no contexto
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {

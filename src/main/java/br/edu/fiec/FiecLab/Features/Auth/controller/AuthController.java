@@ -3,6 +3,7 @@ package br.edu.fiec.FiecLab.Features.Auth.controller;
 import br.edu.fiec.FiecLab.Features.Auth.models.DTO.AuthLoginDTO;
 import br.edu.fiec.FiecLab.Features.Auth.models.DTO.AuthRegisterDTO;
 import br.edu.fiec.FiecLab.Features.Auth.models.DTO.AuthResponseDTO;
+import br.edu.fiec.FiecLab.Features.Auth.models.DTO.GoogleLoginDTO;
 import br.edu.fiec.FiecLab.Features.Auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -45,5 +46,16 @@ public class AuthController {
     public ResponseEntity<AuthResponseDTO> login(@RequestBody @Valid AuthLoginDTO dto) {
         AuthResponseDTO response = authService.login(dto);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    @Operation(summary = "Login com Google", description = "Valida o idToken do Google e retorna o JWT do servidor")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login efetuado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "idToken do Google inválido"),
+            @ApiResponse(responseCode = "404", description = "E-mail não cadastrado")
+    })
+    public ResponseEntity<AuthResponseDTO> loginWithGoogle(@RequestBody @Valid GoogleLoginDTO dto) {
+        return ResponseEntity.ok(authService.loginWithGoogle(dto));
     }
 }
