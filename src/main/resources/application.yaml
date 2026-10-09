@@ -39,3 +39,5 @@ spring:
 app:
   firebase:
     credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+  google:
+    client-id: ${GOOGLE_WEB_CLIENT_ID:}

@@ -6,6 +6,15 @@ data:
   APP_ENV: "production"
   BACKEND_URL: "http://backend-service:8080"
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  APP_ENV: "production"
+  BACKEND_URL: "http://backend-service:8080"
+  GOOGLE_WEB_CLIENT_ID: "123456789-abcdefg.apps.googleusercontent.com"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
