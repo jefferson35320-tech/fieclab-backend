@@ -24,6 +24,7 @@ public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
     private final OAuth2SuccessHandler oauth2SuccessHandler;
 
+
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthFilter,
             AuthenticationProvider authenticationProvider,

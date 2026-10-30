@@ -1,3 +1,4 @@
+
 spring:
   servlet:
     multipart:
@@ -5,7 +6,6 @@ spring:
       max-request-size: 10MB
   application:
     name: FiecLab
-
 
   main:
     allow-bean-definition-overriding: true
@@ -64,3 +64,12 @@ management:
       probes:
         enabled: true
       show-details: never
+app:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  oauth2:
+    redirect-uri: ${FRONTEND_OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/redirect}
+
+# Só mantenha se algum FirebaseConfig seu lê essa propriedade
+firebase:
+  credentials-json: ${FIREBASE_CREDENTIALS_JSON:}

@@ -35,7 +35,8 @@ public class User implements UserDetails {
 
     String fcmToken;
 
-    Role position;
+    @Enumerated(EnumType.STRING)
+    Role position = Role.USER;
 
     public User(String fcmToken, UserDTO userDTO) {
         this.name = userDTO.getName();

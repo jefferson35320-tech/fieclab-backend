@@ -3,12 +3,14 @@ package br.edu.fiec.FiecLab.Features.User.service.Impl;
 import br.edu.fiec.FiecLab.Features.User.Models.DTO.CreateUserRequestDTO;
 import br.edu.fiec.FiecLab.Features.User.Models.DTO.TokenRequestDTO;
 import br.edu.fiec.FiecLab.Features.User.Models.DTO.UserDTO;
+import br.edu.fiec.FiecLab.Features.User.Models.Entities.Role;
 import br.edu.fiec.FiecLab.Features.User.Models.Entities.User;
 import br.edu.fiec.FiecLab.Features.User.repository.UserRepository;
 import br.edu.fiec.FiecLab.Features.User.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,6 +21,8 @@ import java.util.UUID;
 public class UserServiceImpl implements UserService {
 
     private UserRepository userRepository;
+    private PasswordEncoder passwordEncoder;
+
     @Override
     public void setToken(TokenRequestDTO tokenRequestDTO) {
         User user = userRepository.findById(UUID.fromString("b9d353bd-24cc-48a1-84ba-b9a8b6f3e585")).orElseThrow();
@@ -26,16 +30,19 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
     @Override
-    public void createUser(CreateUserRequestDTO createUserRequestDTO){
+    public void createUser(CreateUserRequestDTO dto) {
         User user = new User();
-        user.setName(createUserRequestDTO.name());
-        user.setPassword(createUserRequestDTO.password());
-        user.setEmail(createUserRequestDTO.email());
+        user.setName(dto.name());
+        user.setPassword(passwordEncoder.encode(dto.password()));  // alterado
+        user.setEmail(dto.email());
+        user.setPosition(Role.USER);                                // novo
         userRepository.save(user);
     }
 
     public void addUser(UserDTO userDTO, String token){
-        userRepository.save(new User(token,userDTO));
+        User user = new User(token, userDTO);
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        userRepository.save(user);
     }
 
     public User searchById(UUID id){
@@ -52,7 +59,7 @@ public class UserServiceImpl implements UserService {
             user.setEmail(userDTO.getEmail());
             user.setName(userDTO.getName());
             user.setFcmToken(token);
-            user.setPassword(userDTO.getPassword());
+            user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
             userRepository.save(user);
         }
     }

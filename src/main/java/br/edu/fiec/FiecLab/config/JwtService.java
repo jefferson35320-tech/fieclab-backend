@@ -1,5 +1,6 @@
 package br.edu.fiec.FiecLab.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -21,7 +22,9 @@ public class JwtService {
     // Chave secreta em Base64.
     // Em produção, coloque isso no application.properties/yaml
     // ou em uma variável de ambiente.
-    private static final String SECRET_KEY = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
+    @Value("${app.jwt.secret}")
+    private String secretKey;
+    //private static final String SECRET_KEY = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
 
     // Extrai o username (email) de dentro do token
     public String extractUsername(String token) {
@@ -143,8 +146,7 @@ public class JwtService {
     }
 
     private Key getSignKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
-
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
