@@ -8,9 +8,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -66,4 +69,26 @@ public class ProductController {
         Page<ProductDTO> results = service.searchDynamic(name, type, minPrice, maxPrice, expDate, pageable);
         return ResponseEntity.ok(results);
     }
+
+    @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ProductDTO> uploadImage(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file) {
+
+        ProductDTO updatedProduct = service.uploadImage(id, file);
+        return ResponseEntity.ok(updatedProduct);
+    }
+
+    @GetMapping("/{id}/image")
+    public ResponseEntity uploadImagem(@PathVariable UUID id) {
+        // Sem implementação
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<ProductDTO>> uploadCsv(@RequestParam("file") MultipartFile file) {
+        List<ProductDTO> createdProducts = service.parseAndSaveCsv(file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdProducts);
+    }
+
 }

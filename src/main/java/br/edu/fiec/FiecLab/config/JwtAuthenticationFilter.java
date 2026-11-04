@@ -34,36 +34,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
 
-        // Verifica se o header existe e começa com "Bearer "
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring(7); // Remove "Bearer "
-        userEmail = jwtService.extractUsername(jwt); // Extrai o email do token
+        final String jwt = authHeader.substring(7);
 
-        // Se o email foi extraído e o usuário ainda não está autenticado no contexto
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+        try {
+            final String userEmail = jwtService.extractUsername(jwt);
 
-            // Valida o token e cria o objeto de autenticação
-            if (jwtService.isTokenValid(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                // Define o usuário como autenticado no SecurityContext
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                if (jwtService.isTokenValid(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
+        } catch (Exception e) {
+            // Token inválido, expirado ou malformado.
+            // Não autentica, apenas segue o fluxo — o endpoint vai barrar
+            // como 401/403 se a rota exigir autenticação.
+            SecurityContextHolder.clearContext();
+            logger.warn("Falha ao validar JWT: " + e.getMessage());
         }
+
         filterChain.doFilter(request, response);
     }
 }

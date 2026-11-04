@@ -20,7 +20,7 @@ import java.util.UUID;
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue
+
     UUID id;
 
     @Column(nullable = false)
@@ -30,12 +30,13 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     String email;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     String password;
 
     String fcmToken;
 
-    Role position;
+    @Enumerated(EnumType.STRING)
+    Role position = Role.USER;
 
     public User(String fcmToken, UserDTO userDTO) {
         this.name = userDTO.getName();

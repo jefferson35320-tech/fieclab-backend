@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -40,7 +41,7 @@ public class AuthService {
         // Uso do PasswordEncoder no cadastro
         user.setPassword(passwordEncoder.encode(dto.password()));
         user.setPosition(Role.USER);
-
+        user.setId(UUID.randomUUID());
         userRepository.save(user);
     }
 

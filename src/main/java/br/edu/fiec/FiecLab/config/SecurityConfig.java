@@ -2,6 +2,7 @@ package br.edu.fiec.FiecLab.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -21,43 +22,111 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
+    private final OAuth2SuccessHandler oauth2SuccessHandler;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, AuthenticationProvider authenticationProvider) {
+
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthFilter,
+            AuthenticationProvider authenticationProvider,
+            OAuth2SuccessHandler oauth2SuccessHandler
+    ) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.authenticationProvider = authenticationProvider;
+        this.oauth2SuccessHandler = oauth2SuccessHandler;
     }
 
+    /**
+     * Cadeia exclusiva do Actuator (health para o Kubernetes e métricas para o Prometheus).
+     * Avaliada ANTES da cadeia principal (@Order(1)), sem OAuth2 nem JWT.
+     * Qualquer outro endpoint do actuator é bloqueado.
+     */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+
         http
-                .csrf(AbstractHttpConfigurer::disable) // Desabilita CSRF
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Habilita CORS
+                .securityMatcher("/actuator/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health/**", "/actuator/prometheus").permitAll()
+                        .anyRequest().denyAll()
+                );
+
+        return http.build();
+    }
+
+    /**
+     * Cadeia principal da API (@Order(2)).
+     */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+
+                .cors(cors -> cors
+                        .configurationSource(corsConfigurationSource())
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                // Rotas de autenticação da aplicação
                                 "/api/v1/auth/**",
+
+                                // Rota pública de imagens (liberando a leitura do endpoint do FileController)
+                                "/images/**",
+                                "/api/files/**",
+
+                                // Rotas do OAuth2
+                                "/oauth2/**",
+                                "/login/**",
+
+                                // Swagger
                                 "/v3/api-docs/**",
                                 "/v3/api-docs.yaml",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
-                        ).permitAll() // Rotas de login/registro públicas
-                        .anyRequest().authenticated() // Todas as outras exigem autenticação
+                        ).permitAll()
+
+                        .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JWT é stateless
+
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
                 .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+                .addFilterBefore(
+                        jwtAuthFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
+
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oauth2SuccessHandler)
+                );
 
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*")); // Permite todas as origens
-        configuration.setAllowedMethods(List.of("*")); // Permite todos os métodos (GET, POST, etc.)
-        configuration.setAllowedHeaders(List.of("*")); // Permite todos os headers
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedMethods(List.of("*"));
+        configuration.setAllowedHeaders(List.of("*"));
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 }
