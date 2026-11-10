@@ -18,8 +18,11 @@ WORKDIR /app
 # Copia o JAR gerado no estágio anterior
 COPY --from=builder /app/target/*.jar app.jar
 
-# Cria usuário não-root para segurança
-RUN addgroup -S spring && adduser -S spring -G spring
+# Cria usuário não-root para segurança e dá a ele permissão de escrita
+# na pasta de uploads (o ProductService cria /app/uploads ao iniciar)
+RUN addgroup -S spring && adduser -S spring -G spring \
+    && mkdir -p /app/uploads \
+    && chown -R spring:spring /app
 
 USER spring:spring
 
