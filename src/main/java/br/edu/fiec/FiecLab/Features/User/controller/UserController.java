@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
@@ -45,13 +44,13 @@ public class UserController {
 
     @ResponseStatus(HttpStatus.OK)
     @DeleteMapping(value = "delete/{id}", produces = APPLICATION_JSON_VALUE)
-    public void deleteUser(@PathVariable UUID id) {
+    public void deleteUser(@PathVariable String id) {
         userService.deleteUserById(id);
     }
 
     @ResponseStatus(HttpStatus.OK)
     @GetMapping(value = "find/{id}", produces = APPLICATION_JSON_VALUE)
-    public User findUserById(@PathVariable UUID id) {
+    public User findUserById(@PathVariable String id) {
         return userService.searchById(id);
     }
 
@@ -63,7 +62,7 @@ public class UserController {
 
     @ResponseStatus(HttpStatus.OK)
     @PutMapping(value = "update/{id}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-    public void update(@PathVariable UUID id, @RequestHeader("Authorization") String token, @RequestBody UserDTO userDTO) {
+    public void update(@PathVariable String id, @RequestHeader("Authorization") String token, @RequestBody UserDTO userDTO) {
         userService.UpdateUserById(id, userDTO, token);
     }
 }

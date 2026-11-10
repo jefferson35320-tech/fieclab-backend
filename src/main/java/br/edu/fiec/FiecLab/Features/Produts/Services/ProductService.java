@@ -118,7 +118,7 @@ public class ProductService {
         return repository.findAll(pageable).map(this::toDTO);
     }
 
-    public ProductDTO findById(UUID id) {
+    public ProductDTO findById(String  id) {
         Product product = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
         return toDTO(product);
@@ -130,7 +130,7 @@ public class ProductService {
         return toDTO(repository.save(product));
     }
 
-    public ProductDTO update(UUID id, ProductDTO dto) {
+    public ProductDTO update(String id, ProductDTO dto) {
         Product product = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
 
@@ -147,7 +147,7 @@ public class ProductService {
         return toDTO(repository.save(product));
     }
 
-    public void delete(UUID id) {
+    public void delete(String id) {
         if (!repository.existsById(id)) {
             throw new NoSuchElementException("Produto não encontrado: " + id);
         }
@@ -166,7 +166,7 @@ public class ProductService {
                 .map(this::toDTO);
     }
 
-    public ProductDTO uploadImage(UUID id, MultipartFile file) {
+    public ProductDTO uploadImage(String  id, MultipartFile file) {
         Product product = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
 

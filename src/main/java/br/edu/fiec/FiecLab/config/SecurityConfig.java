@@ -3,12 +3,14 @@ package br.edu.fiec.FiecLab.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -74,18 +76,12 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                // Rotas de autenticação da aplicação
                                 "/api/v1/auth/**",
-
-                                // Rota pública de imagens (liberando a leitura do endpoint do FileController)
+                                "/error",            // novo
                                 "/images/**",
                                 "/api/files/**",
-
-                                // Rotas do OAuth2
                                 "/oauth2/**",
                                 "/login/**",
-
-                                // Swagger
                                 "/v3/api-docs/**",
                                 "/v3/api-docs.yaml",
                                 "/swagger-ui/**",
@@ -105,7 +101,12 @@ public class SecurityConfig {
                         jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class
                 )
-
+                .exceptionHandling(e -> e
+                        .defaultAuthenticationEntryPointFor(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                                request -> request.getRequestURI().startsWith("/api/")
+                        )
+                )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oauth2SuccessHandler)
                 );

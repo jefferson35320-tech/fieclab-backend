@@ -3,7 +3,9 @@ package br.edu.fiec.FiecLab.Features.Auth.controller;
 import br.edu.fiec.FiecLab.Features.Auth.models.DTO.AuthLoginDTO;
 import br.edu.fiec.FiecLab.Features.Auth.models.DTO.AuthRegisterDTO;
 import br.edu.fiec.FiecLab.Features.Auth.models.DTO.AuthResponseDTO;
+import br.edu.fiec.FiecLab.Features.Auth.models.DTO.GoogleLoginDTO;
 import br.edu.fiec.FiecLab.Features.Auth.service.AuthService;
+import br.edu.fiec.FiecLab.Features.Auth.service.GoogleAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -19,9 +21,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final GoogleAuthService googleAuthService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, GoogleAuthService googleAuthService) {
         this.authService = authService;
+        this.googleAuthService = googleAuthService;
     }
 
     @PostMapping("/register")
@@ -45,5 +49,17 @@ public class AuthController {
     public ResponseEntity<AuthResponseDTO> login(@RequestBody @Valid AuthLoginDTO dto) {
         AuthResponseDTO response = authService.login(dto);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    @Operation(summary = "Login com Google (mobile)",
+            description = "Recebe o idToken obtido no app e devolve o JWT da API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login efetuado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "idToken inválido ou e-mail não verificado"),
+            @ApiResponse(responseCode = "400", description = "idToken ausente")
+    })
+    public ResponseEntity<AuthResponseDTO> google(@RequestBody @Valid GoogleLoginDTO dto) {
+        return ResponseEntity.ok(googleAuthService.login(dto));
     }
 }

@@ -2,28 +2,25 @@ package br.edu.fiec.FiecLab.Features.Produts.Repositories;
 
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Product;
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.ProductType;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.TypedQuery;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Order;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
-@Repository
 public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final MongoTemplate mongoTemplate;
+
+    public ProductRepositoryCustomImpl(MongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
+    }
 
     @Override
     public Page<Product> findProductsByCriteria(
@@ -34,80 +31,41 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             LocalDate expDateBefore,
             Pageable pageable) {
 
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-
-        // --- 1. CONSULTA PRINCIPAL (DADOS) ---
-        CriteriaQuery<Product> query = cb.createQuery(Product.class);
-        Root<Product> product = query.from(Product.class);
-
-        List<Predicate> predicates = buildPredicates(cb, product, name, type, minPrice, maxPrice, expDateBefore);
-        query.where(predicates.toArray(new Predicate[0]));
-
-        // Aplica a ordenação vinda do Pageable
-        if (pageable.getSort().isSorted()) {
-            List<Order> orders = new ArrayList<>();
-            pageable.getSort().forEach(order -> {
-                if (order.isAscending()) {
-                    orders.add(cb.asc(product.get(order.getProperty())));
-                } else {
-                    orders.add(cb.desc(product.get(order.getProperty())));
-                }
-            });
-            query.orderBy(orders);
-        }
-
-        TypedQuery<Product> typedQuery = entityManager.createQuery(query);
-
-        // Aplica o deslocamento (offset) e o limite da página
-        typedQuery.setFirstResult((int) pageable.getOffset());
-        typedQuery.setMaxResults(pageable.getPageSize());
-
-        List<Product> products = typedQuery.getResultList();
-
-        // --- 2. CONSULTA DE CONTAGEM (TOTAL ELEMENTS) ---
-        CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
-        Root<Product> countRoot = countQuery.from(Product.class);
-
-        List<Predicate> countPredicates = buildPredicates(cb, countRoot, name, type, minPrice, maxPrice, expDateBefore);
-        countQuery.select(cb.count(countRoot)).where(countPredicates.toArray(new Predicate[0]));
-
-        Long total = entityManager.createQuery(countQuery).getSingleResult();
-
-        return new PageImpl<>(products, pageable, total);
-    }
-
-    // Método auxiliar para reaproveitar os filtros entre a consulta de dados e a de contagem
-    private List<Predicate> buildPredicates(
-            CriteriaBuilder cb,
-            Root<Product> product,
-            String name,
-            ProductType type,
-            Double minPrice,
-            Double maxPrice,
-            LocalDate expDateBefore) {
-
-        List<Predicate> predicates = new ArrayList<>();
+        List<Criteria> filters = new ArrayList<>();
 
         if (name != null && !name.isBlank()) {
-            predicates.add(cb.like(cb.lower(product.get("name")), "%" + name.toLowerCase() + "%"));
+            // Busca "contém", sem diferenciar maiúsculas/minúsculas
+            filters.add(Criteria.where("name").regex(Pattern.quote(name), "i"));
         }
 
         if (type != null) {
-            predicates.add(cb.equal(product.get("type"), type));
+            filters.add(Criteria.where("type").is(type));
         }
 
         if (minPrice != null) {
-            predicates.add(cb.greaterThanOrEqualTo(product.get("price"), minPrice));
+            filters.add(Criteria.where("price").gte(minPrice));
         }
 
         if (maxPrice != null) {
-            predicates.add(cb.lessThanOrEqualTo(product.get("price"), maxPrice));
+            filters.add(Criteria.where("price").lte(maxPrice));
         }
 
         if (expDateBefore != null) {
-            predicates.add(cb.lessThanOrEqualTo(product.get("expDate"), expDateBefore));
+            filters.add(Criteria.where("expDate").lte(expDateBefore));
         }
 
-        return predicates;
+        Query query = new Query();
+        if (!filters.isEmpty()) {
+            query.addCriteria(new Criteria().andOperator(filters.toArray(new Criteria[0])));
+        }
+
+        // A contagem precisa vir ANTES de aplicar paginação/ordenação,
+        // senão o skip/limit distorce o total.
+        long total = mongoTemplate.count(query, Product.class);
+
+        query.with(pageable); // aplica skip, limit e sort do Pageable
+        List<Product> products = mongoTemplate.find(query, Product.class);
+
+        return new PageImpl<>(products, pageable, total);
     }
 }
