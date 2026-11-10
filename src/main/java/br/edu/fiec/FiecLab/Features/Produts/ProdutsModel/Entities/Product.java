@@ -1,37 +1,29 @@
 package br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
-@Entity
-@Table(name = "tb_products")
-@Getter
-@Setter
+@Document(collection = "tb_products")
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Data
-public class    Product {
+public class Product {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
 
-    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
     private Double price;
 
     private String description;
 
     private String imageUrl;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ProductType type;
 
     private Integer batch;

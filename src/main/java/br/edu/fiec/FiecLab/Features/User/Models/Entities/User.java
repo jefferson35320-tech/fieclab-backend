@@ -1,42 +1,38 @@
 package br.edu.fiec.FiecLab.Features.User.Models.Entities;
 
 import br.edu.fiec.FiecLab.Features.User.Models.DTO.UserDTO;
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 
 @Getter
 @Setter
-@Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "Users")
+@Document(collection = "users")
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue
-    UUID id;
+    private String id;
 
-    @Column(nullable = false)
-    String name;
+    private String name;
 
+    @Indexed(unique = true)
+    private String email;
 
-    @Column(unique = true, nullable = false)
-    String email;
+    private String password;
 
-    @Column(nullable = false)
-    String password;
+    private String fcmToken;
 
-    String fcmToken;
-
-    @Enumerated(EnumType.STRING)
-    Role position = Role.USER;
+    private Role position = Role.USER;
 
     public User(String fcmToken, UserDTO userDTO) {
         this.name = userDTO.getName();
