@@ -14,7 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @AllArgsConstructor
@@ -25,14 +24,17 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void setToken(TokenRequestDTO tokenRequestDTO) {
-        User user = userRepository.findById(UUID.fromString("b9d353bd-24cc-48a1-84ba-b9a8b6f3e585")).orElseThrow();
+        // ATENÇÃO: id fixo (hardcoded). Veja a observação abaixo.
+        User user = userRepository.findById("COLOQUE_AQUI_UM_ID_VALIDO").orElseThrow();
         user.setFcmToken(tokenRequestDTO.token());
         userRepository.save(user);
     }
+
     @Override
     public void createUser(CreateUserRequestDTO dto) {
         User user = new User();
         user.setName(dto.name());
+    public void addUser(UserDTO userDTO, String token) {
         user.setPassword(passwordEncoder.encode(dto.password()));  // alterado
         user.setEmail(dto.email());
         user.setPosition(Role.USER);                                // novo
@@ -45,17 +47,17 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    public User searchById(UUID id){
-        return userRepository.findById(id).get();
+    public User searchById(String id) {
+        return userRepository.findById(id).orElseThrow();
     }
 
-    public void deleteUserById(UUID id){
+    public void deleteUserById(String id) {
         userRepository.deleteById(id);
     }
 
-    public void UpdateUserById(UUID id,UserDTO userDTO, String token){
+    public void UpdateUserById(String id, UserDTO userDTO, String token) {
         User user = userRepository.findById(id).orElse(null);
-        if (user != null)   {
+        if (user != null) {
             user.setEmail(userDTO.getEmail());
             user.setName(userDTO.getName());
             user.setFcmToken(token);
@@ -64,7 +66,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public List<User> FindAllUsers(){
+    public List<User> FindAllUsers() {
         return userRepository.findAll();
     }
 

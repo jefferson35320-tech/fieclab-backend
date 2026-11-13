@@ -15,7 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.time.LocalDate;
-import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -34,7 +34,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductDTO> findById(@PathVariable UUID id) {
+    public ResponseEntity<ProductDTO> findById(@PathVariable String id) {
         return ResponseEntity.ok(service.findById(id));
     }
 
@@ -45,12 +45,12 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductDTO> update(@PathVariable UUID id, @RequestBody ProductDTO dto) {
+    public ResponseEntity<ProductDTO> update(@PathVariable String id, @RequestBody ProductDTO dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable String id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
@@ -72,7 +72,7 @@ public class ProductController {
 
     @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProductDTO> uploadImage(
-            @PathVariable UUID id,
+            @PathVariable String id,
             @RequestParam("file") MultipartFile file) {
 
         ProductDTO updatedProduct = service.uploadImage(id, file);
@@ -80,7 +80,8 @@ public class ProductController {
     }
 
     @GetMapping("/{id}/image")
-    public ResponseEntity uploadImagem(@PathVariable UUID id) {
+
+    public ResponseEntity<Void> getImage(@PathVariable String id) {
         // Sem implementação
         return ResponseEntity.ok().build();
     }
@@ -90,5 +91,4 @@ public class ProductController {
         List<ProductDTO> createdProducts = service.parseAndSaveCsv(file);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdProducts);
     }
-
 }
