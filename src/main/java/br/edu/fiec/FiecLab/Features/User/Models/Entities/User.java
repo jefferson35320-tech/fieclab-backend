@@ -30,9 +30,13 @@ public class User implements UserDetails {
 
     private String password;
 
-    private String fcmToken;
+    @Column(nullable = true)
+    String password;
 
-    private Role position = Role.USER;
+    String fcmToken;
+
+    @Enumerated(EnumType.STRING)
+    Role position = Role.USER;
 
     public User(String fcmToken, UserDTO userDTO) {
         this.name = userDTO.getName();

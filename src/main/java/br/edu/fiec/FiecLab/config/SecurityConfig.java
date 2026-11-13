@@ -76,12 +76,18 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                // Rotas de autenticação da aplicação
                                 "/api/v1/auth/**",
-                                "/error",            // novo
+
+                                // Rota pública de imagens (liberando a leitura do endpoint do FileController)
                                 "/images/**",
                                 "/api/files/**",
+
+                                // Rotas do OAuth2
                                 "/oauth2/**",
                                 "/login/**",
+
+                                // Swagger
                                 "/v3/api-docs/**",
                                 "/v3/api-docs.yaml",
                                 "/swagger-ui/**",

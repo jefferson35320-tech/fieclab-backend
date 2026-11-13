@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -79,6 +80,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}/image")
+
     public ResponseEntity<Void> getImage(@PathVariable String id) {
         // Sem implementação
         return ResponseEntity.ok().build();

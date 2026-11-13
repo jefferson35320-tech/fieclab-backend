@@ -34,13 +34,14 @@ public class UserServiceImpl implements UserService {
     public void createUser(CreateUserRequestDTO dto) {
         User user = new User();
         user.setName(dto.name());
-        user.setPassword(passwordEncoder.encode(dto.password()));
+    public void addUser(UserDTO userDTO, String token) {
+        user.setPassword(passwordEncoder.encode(dto.password()));  // alterado
         user.setEmail(dto.email());
-        user.setPosition(Role.USER);
+        user.setPosition(Role.USER);                                // novo
         userRepository.save(user);
     }
 
-    public void addUser(UserDTO userDTO, String token) {
+    public void addUser(UserDTO userDTO, String token){
         User user = new User(token, userDTO);
         user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         userRepository.save(user);
@@ -74,7 +75,6 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado com o email: " + username));
     }
-
     @Override
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
