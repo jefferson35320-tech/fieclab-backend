@@ -77,11 +77,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     private User createUserFromGoogle(String email, String name) {
         User user = new User();
+        user.setUuid(UUID.randomUUID().toString());
         user.setName(name);
         user.setEmail(email);
         // Senha aleatória: quem entra pelo Google não usa senha local
         user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
-        user.setPosition(Role.USER);
+        user.setPosition(Role.CLIENTE);
         return userRepository.save(user);
     }
 }

@@ -40,7 +40,7 @@ public class AuthService {
 
         // Uso do PasswordEncoder no cadastro
         user.setPassword(passwordEncoder.encode(dto.password()));
-        user.setPosition(Role.USER);
+        user.setPosition(Role.CLIENTE);
         user.setId(String.valueOf(String.valueOf(UUID.randomUUID())));
         userRepository.save(user);
     }

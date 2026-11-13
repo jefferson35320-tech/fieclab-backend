@@ -1,36 +1,44 @@
 package br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities;
 
 import lombok.*;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
+import org.springframework.data.mongodb.core.mapping.MongoId;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Document(collection = "tb_products")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Document(collection = "produtos")
 public class Product {
 
-    @Id
+    @MongoId(FieldType.OBJECT_ID)
     private String id;
 
+    @Field("nome")
     private String name;
 
-    private Double price;
-
+    @Field("descricao")
     private String description;
 
-    private String imageUrl;
+    @Field(name = "preco", targetType = FieldType.DECIMAL128)
+    private BigDecimal price;
 
-    private ProductType type;
+    private boolean ativo = true;
 
-    private Integer batch;
+    @Field("data_fabricacao")
+    private LocalDate dataFabricacao;
 
-    private LocalDate mfgDate;
+    private LocalDate validade;
 
-    private LocalDate expDate;
+    private String fispq;   // link
 
-    private Integer supplierId;
+    private String imagem;  // URL
+
+    private CategoriaProduto categoria;
+
+    private Estoque estoque = new Estoque();
 }

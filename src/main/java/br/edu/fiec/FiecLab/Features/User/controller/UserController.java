@@ -25,8 +25,8 @@ public class UserController {
     }
 
     @PostMapping("/token")
-    public ResponseEntity<Void> setToken(@RequestBody TokenRequestDTO tokenRequestDTO) {
-        userService.setToken(tokenRequestDTO);
+    public ResponseEntity<Void> setToken(Authentication auth, @RequestBody TokenRequestDTO dto) {
+        userService.setToken(auth.getName(), dto);
         return ResponseEntity.ok().build();
     }
 
@@ -61,8 +61,8 @@ public class UserController {
     }
 
     @ResponseStatus(HttpStatus.OK)
-    @PutMapping(value = "update/{id}", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-    public void update(@PathVariable String id, @RequestHeader("Authorization") String token, @RequestBody UserDTO userDTO) {
-        userService.UpdateUserById(id, userDTO, token);
+    @PutMapping(value = "update/{id}", consumes = APPLICATION_JSON_VALUE)
+    public void update(@PathVariable String id, @RequestBody UserDTO userDTO) {
+        userService.UpdateUserById(id, userDTO);
     }
 }

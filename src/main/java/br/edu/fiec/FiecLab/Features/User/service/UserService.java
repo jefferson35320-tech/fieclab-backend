@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public interface UserService extends UserDetailsService {
-    void setToken(TokenRequestDTO tokenRequestDTO);
+    void setToken(String email, TokenRequestDTO tokenRequestDTO);
 
     void createUser(CreateUserRequestDTO createUserRequestDTO);
 

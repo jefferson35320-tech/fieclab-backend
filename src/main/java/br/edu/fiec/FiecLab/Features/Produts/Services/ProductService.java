@@ -1,10 +1,15 @@
 package br.edu.fiec.FiecLab.Features.Produts.Services;
 
+import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.DTO.EstoqueDTO;
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.DTO.ProductDTO;
+import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.CategoriaProduto;
+import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Estoque;
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Product;
-import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.ProductType;
+
 import br.edu.fiec.FiecLab.Features.Produts.Repositories.ProductRepository;
 import net.coobird.thumbnailator.Thumbnails;
+import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Categoria;
+import java.math.BigDecimal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,8 +25,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -73,28 +80,27 @@ public class ProductService {
                     // O limite -1 mantém colunas vazias no final da linha
                     String[] data = line.split(",", -1);
 
-                    // Colunas: name, price, description, imageUrl, type, batch, mfgDate, expDate, supplierId
                     String name = data[0].trim();
-                    Double price = Double.parseDouble(data[1].trim());
+                    BigDecimal price = new BigDecimal(data[1].trim());
                     String description = data.length > 2 && !data[2].isBlank() ? data[2].trim() : null;
-                    String imageUrl = data.length > 3 && !data[3].isBlank() ? data[3].trim() : null;
-                    ProductType type = ProductType.valueOf(data[4].trim().toUpperCase());
-                    Integer batch = data.length > 5 && !data[5].isBlank() ? Integer.parseInt(data[5].trim()) : null;
-                    LocalDate mfgDate = data.length > 6 && !data[6].isBlank() ? LocalDate.parse(data[6].trim()) : null;
-                    LocalDate expDate = data.length > 7 && !data[7].isBlank() ? LocalDate.parse(data[7].trim()) : null;
-                    Integer supplierId = data.length > 8 && !data[8].isBlank() ? Integer.parseInt(data[8].trim()) : null;
+                    String imagem = data.length > 3 && !data[3].isBlank() ? data[3].trim() : null;
+                    Categoria categoria = Categoria.valueOf(data[4].trim().toUpperCase());
+                    LocalDate dataFabricacao = data.length > 5 && !data[5].isBlank() ? LocalDate.parse(data[5].trim()) : null;
+                    LocalDate validade = data.length > 6 && !data[6].isBlank() ? LocalDate.parse(data[6].trim()) : null;
+                    String fispq = data.length > 7 && !data[7].isBlank() ? data[7].trim() : null;
+                    int quantidade = data.length > 8 && !data[8].isBlank() ? Integer.parseInt(data[8].trim()) : 0;
+                    int quantidadeMinima = data.length > 9 && !data[9].isBlank() ? Integer.parseInt(data[9].trim()) : 0;
 
-                    Product product = Product.builder()
-                            .name(name)
-                            .price(price)
-                            .description(description)
-                            .imageUrl(imageUrl)
-                            .type(type)
-                            .batch(batch)
-                            .mfgDate(mfgDate)
-                            .expDate(expDate)
-                            .supplierId(supplierId)
-                            .build();
+                    Product product = new Product();
+                    product.setName(name);
+                    product.setPrice(price);
+                    product.setDescription(description);
+                    product.setImagem(imagem);
+                    product.setCategoria(new CategoriaProduto(categoria));
+                    product.setDataFabricacao(dataFabricacao);
+                    product.setValidade(validade);
+                    product.setFispq(fispq);
+                    product.setEstoque(new Estoque(quantidade, quantidadeMinima, LocalDateTime.now()));
 
                     productsToSave.add(product);
 
@@ -125,25 +131,15 @@ public class ProductService {
     }
 
     public ProductDTO create(ProductDTO dto) {
-        Product product = toEntity(dto);
-        product.setId(null);
+        Product product = new Product();
+        applyDto(product, dto);
         return toDTO(repository.save(product));
     }
 
     public ProductDTO update(String id, ProductDTO dto) {
         Product product = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
-
-        product.setName(dto.name());
-        product.setPrice(dto.price());
-        product.setDescription(dto.description());
-        product.setImageUrl(dto.imageUrl());
-        product.setType(dto.type());
-        product.setBatch(dto.batch());
-        product.setMfgDate(dto.mfgDate());
-        product.setExpDate(dto.expDate());
-        product.setSupplierId(dto.supplierId());
-
+        applyDto(product, dto);
         return toDTO(repository.save(product));
     }
 
@@ -156,16 +152,15 @@ public class ProductService {
 
     public Page<ProductDTO> searchDynamic(
             String name,
-            ProductType type,
-            Double minPrice,
-            Double maxPrice,
+            Categoria categoria,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
             LocalDate expDateBefore,
             Pageable pageable) {
 
-        return repository.findProductsByCriteria(name, type, minPrice, maxPrice, expDateBefore, pageable)
+        return repository.findProductsByCriteria(name, categoria, minPrice, maxPrice, expDateBefore, pageable)
                 .map(this::toDTO);
     }
-
     public ProductDTO uploadImage(String  id, MultipartFile file) {
         Product product = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
@@ -201,7 +196,7 @@ public class ProductService {
                     .toFile(thumbImagePath.toFile());
 
             // Salva apenas o nome base da imagem no atributo imageUrl do produto
-            product.setImageUrl(baseFileName);
+            product.setImagem(baseFileName);   // era setImageUrl
 
             return toDTO(repository.save(product));
 
@@ -210,33 +205,45 @@ public class ProductService {
         }
     }
 
-    private ProductDTO toDTO(Product product) {
+    private ProductDTO toDTO(Product p) {
+        Estoque e = p.getEstoque();
+        EstoqueDTO estoqueDTO = e == null ? null
+                : new EstoqueDTO(e.getQuantidade(), e.getQuantidadeMinima(), e.getDataAtualizacao());
+
         return new ProductDTO(
-                product.getId(),
-                product.getName(),
-                product.getPrice(),
-                product.getDescription(),
-                product.getImageUrl(),
-                product.getType(),
-                product.getBatch(),
-                product.getMfgDate(),
-                product.getExpDate(),
-                product.getSupplierId()
+                p.getId(),
+                p.getName(),
+                p.getPrice(),
+                p.getDescription(),
+                p.isAtivo(),
+                p.getDataFabricacao(),
+                p.getValidade(),
+                p.getFispq(),
+                p.getImagem(),
+                p.getCategoria() == null ? null : p.getCategoria().getNome(),
+                estoqueDTO
         );
     }
 
-    private Product toEntity(ProductDTO dto) {
-        return Product.builder()
-                .id(dto.id())
-                .name(dto.name())
-                .price(dto.price())
-                .description(dto.description())
-                .imageUrl(dto.imageUrl())
-                .type(dto.type())
-                .batch(dto.batch())
-                .mfgDate(dto.mfgDate())
-                .expDate(dto.expDate())
-                .supplierId(dto.supplierId())
-                .build();
+    private void applyDto(Product p, ProductDTO dto) {
+        p.setName(dto.name());
+        p.setPrice(dto.price());
+        p.setDescription(dto.description());
+        if (dto.ativo() != null) {
+            p.setAtivo(dto.ativo());
+        }
+        p.setDataFabricacao(dto.dataFabricacao());
+        p.setValidade(dto.validade());
+        p.setFispq(dto.fispq());
+        p.setImagem(dto.imagem());
+        p.setCategoria(new CategoriaProduto(dto.categoria()));
+
+        if (dto.estoque() != null) {
+            Estoque e = p.getEstoque() != null ? p.getEstoque() : new Estoque();
+            e.setQuantidade(dto.estoque().quantidade());
+            e.setQuantidadeMinima(dto.estoque().quantidadeMinima());
+            e.setDataAtualizacao(LocalDateTime.now());
+            p.setEstoque(e);
+        }
     }
 }

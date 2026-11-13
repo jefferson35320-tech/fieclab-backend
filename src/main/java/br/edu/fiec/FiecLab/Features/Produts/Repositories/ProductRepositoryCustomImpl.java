@@ -1,14 +1,15 @@
 package br.edu.fiec.FiecLab.Features.Produts.Repositories;
 
+import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Categoria;
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Product;
-import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.ProductType;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.support.PageableExecutionUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,33 +26,33 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
     @Override
     public Page<Product> findProductsByCriteria(
             String name,
-            ProductType type,
-            Double minPrice,
-            Double maxPrice,
+            Categoria categoria,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
             LocalDate expDateBefore,
             Pageable pageable) {
 
         List<Criteria> filters = new ArrayList<>();
 
         if (name != null && !name.isBlank()) {
-            // Busca "contém", sem diferenciar maiúsculas/minúsculas
-            filters.add(Criteria.where("name").regex(Pattern.quote(name), "i"));
+            filters.add(Criteria.where("name")
+                    .regex(Pattern.compile(Pattern.quote(name.trim()), Pattern.CASE_INSENSITIVE)));
         }
 
-        if (type != null) {
-            filters.add(Criteria.where("type").is(type));
+        if (categoria != null) {
+            filters.add(Criteria.where("categoria.nome").is(categoria));
         }
 
-        if (minPrice != null) {
+        if (minPrice != null && maxPrice != null) {
+            filters.add(Criteria.where("price").gte(minPrice).lte(maxPrice));
+        } else if (minPrice != null) {
             filters.add(Criteria.where("price").gte(minPrice));
-        }
-
-        if (maxPrice != null) {
+        } else if (maxPrice != null) {
             filters.add(Criteria.where("price").lte(maxPrice));
         }
 
         if (expDateBefore != null) {
-            filters.add(Criteria.where("expDate").lte(expDateBefore));
+            filters.add(Criteria.where("validade").lte(expDateBefore));
         }
 
         Query query = new Query();
@@ -59,13 +60,9 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             query.addCriteria(new Criteria().andOperator(filters.toArray(new Criteria[0])));
         }
 
-        // A contagem precisa vir ANTES de aplicar paginação/ordenação,
-        // senão o skip/limit distorce o total.
-        long total = mongoTemplate.count(query, Product.class);
+        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), Product.class);
+        List<Product> content = mongoTemplate.find(query.with(pageable), Product.class);
 
-        query.with(pageable); // aplica skip, limit e sort do Pageable
-        List<Product> products = mongoTemplate.find(query, Product.class);
-
-        return new PageImpl<>(products, pageable, total);
+        return PageableExecutionUtils.getPage(content, pageable, () -> total);
     }
 }

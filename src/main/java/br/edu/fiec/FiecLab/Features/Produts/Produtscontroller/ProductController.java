@@ -1,18 +1,21 @@
 package br.edu.fiec.FiecLab.Features.Produts.Produtscontroller;
 
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.DTO.ProductDTO;
-import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.ProductType;
+import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Categoria;
 import br.edu.fiec.FiecLab.Features.Produts.Services.ProductService;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -38,13 +41,13 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<ProductDTO> create(@RequestBody ProductDTO dto) {
+    public ResponseEntity<ProductDTO> create(@Valid @RequestBody ProductDTO dto) {
         ProductDTO created = service.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductDTO> update(@PathVariable String id, @RequestBody ProductDTO dto) {
+    public ResponseEntity<ProductDTO> update(@PathVariable String id, @Valid @RequestBody ProductDTO dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
@@ -57,18 +60,15 @@ public class ProductController {
     @GetMapping("/search")
     public ResponseEntity<Page<ProductDTO>> searchDynamic(
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) ProductType type,
-            @RequestParam(required = false) Double minPrice,
-            @RequestParam(required = false) Double maxPrice,
-            @RequestParam(required = false) String expDateBefore,
+            @RequestParam(required = false) Categoria categoria,      // e ra ProductType type
+            @RequestParam(required = false) BigDecimal minPrice,      // era Double
+            @RequestParam(required = false) BigDecimal maxPrice,      // era Double
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate expDateBefore,
             @ParameterObject @PageableDefault(size = 10, sort = "name") Pageable pageable) {
 
-        LocalDate expDate = (expDateBefore != null) ? LocalDate.parse(expDateBefore) : null;
-
-        Page<ProductDTO> results = service.searchDynamic(name, type, minPrice, maxPrice, expDate, pageable);
-        return ResponseEntity.ok(results);
+        return ResponseEntity.ok(
+                service.searchDynamic(name, categoria, minPrice, maxPrice, expDateBefore, pageable));
     }
-
     @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProductDTO> uploadImage(
             @PathVariable String id,
