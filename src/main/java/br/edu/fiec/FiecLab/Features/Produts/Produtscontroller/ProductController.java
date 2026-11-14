@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -27,6 +28,13 @@ public class ProductController {
 
     public ProductController(ProductService service) {
         this.service = service;
+    }
+
+    @GetMapping("/{id}/image")
+    public ResponseEntity<Map<String, String>> getImage(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "false") boolean thumb) {
+        return ResponseEntity.ok(Map.of("url", service.getImageUrl(id, thumb)));
     }
 
     @GetMapping
@@ -76,12 +84,6 @@ public class ProductController {
 
         ProductDTO updatedProduct = service.uploadImage(id, file);
         return ResponseEntity.ok(updatedProduct);
-    }
-
-    @GetMapping("/{id}/image")
-    public ResponseEntity<Void> getImage(@PathVariable String id) {
-        // Sem implementação
-        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

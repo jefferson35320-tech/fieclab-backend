@@ -18,12 +18,11 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -37,15 +36,11 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final ProductRepository repository;
-    private final Path uploadDir = Paths.get("uploads");
+    private final S3StorageService storage;
 
-    public ProductService(ProductRepository repository) {
+    public ProductService(ProductRepository repository, S3StorageService storage) {
         this.repository = repository;
-        try {
-            Files.createDirectories(uploadDir);
-        } catch (IOException e) {
-            throw new RuntimeException("Não foi possível criar o diretório para upload de arquivos", e);
-        }
+        this.storage = storage;
     }
 
     public List<ProductDTO> parseAndSaveCsv(MultipartFile file) {
@@ -124,7 +119,7 @@ public class ProductService {
         return repository.findAll(pageable).map(this::toDTO);
     }
 
-    public ProductDTO findById(String  id) {
+    public ProductDTO findById(String id) {
         Product product = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
         return toDTO(product);
@@ -161,7 +156,8 @@ public class ProductService {
         return repository.findProductsByCriteria(name, categoria, minPrice, maxPrice, expDateBefore, pageable)
                 .map(this::toDTO);
     }
-    public ProductDTO uploadImage(String  id, MultipartFile file) {
+
+    public ProductDTO uploadImage(String id, MultipartFile file) {
         Product product = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
 
@@ -179,30 +175,29 @@ public class ProductService {
             // Gera um nome base único para as imagens
             String baseFileName = UUID.randomUUID() + ".jpg";
 
-            // Caminhos de saída para o disco local
-            Path mainImagePath = this.uploadDir.resolve(baseFileName);
-            Path thumbImagePath = this.uploadDir.resolve("thumb_" + baseFileName);
+            // 1. Imagem padrão (600x600 JPG) -> S3
+            storage.upload(baseFileName, toJpegBytes(originalImage, 600), "image/jpeg");
 
-            // 1. Gera e salva a imagem padrão (600x600 em formato JPG)
-            Thumbnails.of(originalImage)
-                    .size(600, 600)
-                    .outputFormat("jpg")
-                    .toFile(mainImagePath.toFile());
+            // 2. Thumbnail (150x150 JPG) -> S3
+            storage.upload("thumb_" + baseFileName, toJpegBytes(originalImage, 150), "image/jpeg");
 
-            // 2. Gera e salva o thumbnail (150x150 em formato JPG)
-            Thumbnails.of(originalImage)
-                    .size(150, 150)
-                    .outputFormat("jpg")
-                    .toFile(thumbImagePath.toFile());
-
-            // Salva apenas o nome base da imagem no atributo imageUrl do produto
-            product.setImagem(baseFileName);   // era setImageUrl
+            // Salva apenas o nome base da imagem no produto
+            product.setImagem(baseFileName);
 
             return toDTO(repository.save(product));
 
         } catch (IOException ex) {
             throw new RuntimeException("Falha ao processar e armazenar as imagens do produto: " + ex.getMessage(), ex);
         }
+    }
+
+    private byte[] toJpegBytes(BufferedImage image, int size) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Thumbnails.of(image)
+                .size(size, size)
+                .outputFormat("jpg")
+                .toOutputStream(out);
+        return out.toByteArray();
     }
 
     private ProductDTO toDTO(Product p) {
@@ -245,5 +240,22 @@ public class ProductService {
             e.setDataAtualizacao(LocalDateTime.now());
             p.setEstoque(e);
         }
+    }
+    public String getImageUrl(String id, boolean thumb) {
+        Product product = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
+
+        String imagem = product.getImagem();
+        if (imagem == null || imagem.isBlank()) {
+            throw new NoSuchElementException("Produto sem imagem: " + id);
+        }
+
+        // produtos vindos do CSV podem ter uma URL externa no campo imagem
+        if (imagem.startsWith("http")) {
+            return imagem;
+        }
+
+        String key = thumb ? "thumb_" + imagem : imagem;
+        return storage.presignedUrl(key, Duration.ofMinutes(30));
     }
 }
