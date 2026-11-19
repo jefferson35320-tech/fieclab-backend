@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.FieldType;
 import org.springframework.data.mongodb.core.mapping.MongoId;
 
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,6 +27,9 @@ public class Pedido {
     @Indexed
     @Field(name = "usuario_id", targetType = FieldType.OBJECT_ID)
     private String usuarioId;
+
+    @Indexed(unique = true, sparse = true)
+    private String senha;
 
     @Field("data_pedido")
     private LocalDateTime dataPedido;

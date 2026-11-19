@@ -8,10 +8,10 @@ import java.util.List;
 
 public record PedidoDTO(
         String id,
+        String senha,
         String usuarioId,
         LocalDateTime dataPedido,
         BigDecimal valorTotal,
         StatusPedido status,
         List<ItemPedidoDTO> itens
-) {
-}
+) {}

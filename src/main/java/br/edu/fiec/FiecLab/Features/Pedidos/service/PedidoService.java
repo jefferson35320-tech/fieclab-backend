@@ -13,6 +13,7 @@ import br.edu.fiec.FiecLab.Features.Produts.Repositories.ProductRepository;
 import br.edu.fiec.FiecLab.Features.User.Models.Entities.ItemCarrinho;
 import br.edu.fiec.FiecLab.Features.User.Models.Entities.Role;
 import br.edu.fiec.FiecLab.Features.User.Models.Entities.User;
+import org.springframework.dao.DuplicateKeyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -29,25 +30,27 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 @Service
 public class PedidoService {
 
     private static final Logger log = LoggerFactory.getLogger(PedidoService.class);
 
+
     private final PedidoRepository pedidoRepository;
+    private final CodigoPedidoGenerator codigoPedidoGenerator;
     private final ProductRepository productRepository;
     private final MongoTemplate mongoTemplate;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          ProductRepository productRepository,
-                         MongoTemplate mongoTemplate) {
+                         MongoTemplate mongoTemplate,
+                         CodigoPedidoGenerator codigoPedidoGenerator){
         this.pedidoRepository = pedidoRepository;
         this.productRepository = productRepository;
         this.mongoTemplate = mongoTemplate;
+        this.codigoPedidoGenerator = codigoPedidoGenerator;
     }
 
     // ------------------------------------------------------------------
@@ -94,7 +97,7 @@ public class PedidoService {
             pedido.setStatus(StatusPedido.PENDENTE);
             pedido.setItens(itens);
             pedido.setValorTotal(calcularTotal(itens));
-            salvo = pedidoRepository.save(pedido);
+            salvo = salvarComSenha(pedido);
         } catch (RuntimeException e) {
             devolverEstoque(itens);   // desfaz o que já foi baixado
             throw e;
@@ -104,6 +107,25 @@ public class PedidoService {
             limparCarrinho(usuario.getId());
         }
         return toDTO(salvo);
+    }
+
+    public PedidoDTO buscarPorSenha(User usuario, String senha) {
+        exigirAdmin(usuario);
+        Pedido pedido = pedidoRepository.findBySenha(senha.toUpperCase())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido não encontrado"));
+        return toDTO(pedido);
+    }
+
+    private Pedido salvarComSenha(Pedido pedido) {
+        for (int tentativa = 0; tentativa < 5; tentativa++) {
+            pedido.setSenha(codigoPedidoGenerator.gerar());
+            try {
+                return pedidoRepository.save(pedido);   // agora pode ser save(), o id é gerado pelo Mongo
+            } catch (DuplicateKeyException e) {
+                // colisão de senha (muito improvável), tenta outra
+            }
+        }
+        throw new IllegalStateException("Não foi possível gerar uma senha única para o pedido");
     }
 
     // ------------------------------------------------------------------
@@ -158,10 +180,6 @@ public class PedidoService {
         return toDTO(transicionar(pedido, StatusPedido.CANCELADO));
     }
 
-    /**
-     * Troca o status só se ele ainda for o que lemos (evita duas requisições
-     * simultâneas cancelarem o mesmo pedido e devolverem o estoque duas vezes).
-     */
     private Pedido transicionar(Pedido atual, StatusPedido novo) {
         Query query = new Query(Criteria.where("id").is(atual.getId()).and("status").is(atual.getStatus()));
         Pedido atualizado = mongoTemplate.findAndModify(
@@ -185,24 +203,13 @@ public class PedidoService {
     // ------------------------------------------------------------------
 
     private Product baixarEstoque(String produtoId, int quantidade) {
-        Query query = new Query(new Criteria().andOperator(
-                Criteria.where("id").is(produtoId),
-                Criteria.where("ativo").is(true),
-                Criteria.where("estoque.quantidade").gte(quantidade)));
-
-        Update update = new Update()
-                .inc("estoque.quantidade", -quantidade)
-                .set("estoque.dataAtualizacao", LocalDateTime.now());
-
-        Product produto = mongoTemplate.findAndModify(
-                query, update, FindAndModifyOptions.options().returnNew(true), Product.class);
-
+        Product produto = productRepository.decrementStock(produtoId, quantidade);
         if (produto == null) {
             if (!productRepository.existsById(produtoId)) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado: " + produtoId);
             }
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Produto inativo ou sem estoque suficiente: " + produtoId);
+                    "Produto inativo ou sem estoque suficiente (respeitando o mínimo): " + produtoId);
         }
         return produto;
     }
@@ -267,6 +274,6 @@ public class PedidoService {
         List<ItemPedidoDTO> itens = p.getItens().stream()
                 .map(i -> new ItemPedidoDTO(i.getProdutoId(), i.getNome(), i.getQuantidade(), i.getPrecoUnitario()))
                 .toList();
-        return new PedidoDTO(p.getId(), p.getUsuarioId(), p.getDataPedido(), p.getValorTotal(), p.getStatus(), itens);
+        return new PedidoDTO(p.getId(), p.getSenha(), p.getUsuarioId(), p.getDataPedido(), p.getValorTotal(), p.getStatus(), itens);
     }
 }

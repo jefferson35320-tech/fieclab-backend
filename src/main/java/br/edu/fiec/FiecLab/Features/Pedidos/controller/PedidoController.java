@@ -3,6 +3,7 @@ package br.edu.fiec.FiecLab.Features.Pedidos.controller;
 import br.edu.fiec.FiecLab.Features.Pedidos.Models.DTO.AtualizarStatusPedidoDTO;
 import br.edu.fiec.FiecLab.Features.Pedidos.Models.DTO.CriarPedidoDTO;
 import br.edu.fiec.FiecLab.Features.Pedidos.Models.DTO.PedidoDTO;
+import br.edu.fiec.FiecLab.Features.Pedidos.Models.Entities.Pedido;
 import br.edu.fiec.FiecLab.Features.Pedidos.Models.Entities.StatusPedido;
 import br.edu.fiec.FiecLab.Features.Pedidos.service.PedidoService;
 import br.edu.fiec.FiecLab.Features.User.Models.Entities.User;
@@ -33,6 +34,13 @@ public class PedidoController {
             @AuthenticationPrincipal User usuario,
             @Valid @RequestBody(required = false) CriarPedidoDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(usuario, dto));
+    }
+
+    @GetMapping("/senha/{senha}")
+    public ResponseEntity<PedidoDTO> buscarPorSenha(
+            @AuthenticationPrincipal User usuario,
+            @PathVariable String senha) {
+        return ResponseEntity.ok(service.buscarPorSenha(usuario, senha));
     }
 
     /** Pedidos do usuário logado, do mais recente para o mais antigo. */

@@ -91,7 +91,10 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
                                         .subtract("estoque.quantidade_minima"))
                         .greaterThanEqualToValue(quantidade));
 
-        Query query = new Query(Criteria.where("id").is(id).andOperator(disponivel));
+        Query query = new Query(new Criteria().andOperator(
+                Criteria.where("id").is(id),
+                Criteria.where("ativo").is(true),
+                disponivel));
 
         Update update = new Update()
                 .inc("estoque.quantidade", -quantidade)

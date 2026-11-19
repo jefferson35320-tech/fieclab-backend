@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -37,11 +36,9 @@ public class AuthService {
         User user = new User();
         user.setName(dto.name());
         user.setEmail(dto.email());
-
-        // Uso do PasswordEncoder no cadastro
         user.setPassword(passwordEncoder.encode(dto.password()));
         user.setPosition(Role.CLIENTE);
-        user.setId(String.valueOf(String.valueOf(UUID.randomUUID())));
+        // sem setId: o Mongo gera o ObjectId no save
         userRepository.save(user);
     }
 

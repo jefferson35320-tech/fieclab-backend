@@ -12,8 +12,10 @@ import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Categoria;
 import java.math.BigDecimal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -145,7 +147,7 @@ public class ProductService {
         repository.deleteById(id);
     }
 
-    public ProductDTO decreaseStock(String id, int quantidade) {
+    public ProductDTO baixarEstoque(String id, int quantidade) {
         Product updated = repository.decrementStock(id, quantidade);
 
         if (updated == null) {
@@ -258,7 +260,6 @@ public class ProductService {
         p.setDataFabricacao(dto.dataFabricacao());
         p.setValidade(dto.validade());
         p.setFispq(dto.fispq());
-        p.setImagem(dto.imagem());
         p.setCategoria(new CategoriaProduto(dto.categoria()));
 
         if (dto.estoque() != null) {
@@ -267,6 +268,9 @@ public class ProductService {
             e.setQuantidadeMinima(dto.estoque().quantidadeMinima());
             e.setDataAtualizacao(LocalDateTime.now());
             p.setEstoque(e);
+        }
+        if (dto.imagem() != null) {
+            p.setImagem(dto.imagem());
         }
     }
     public String getImageUrl(String id, boolean thumb) {

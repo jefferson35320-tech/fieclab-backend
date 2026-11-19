@@ -96,10 +96,10 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}/estoque")
-    public ResponseEntity<ProductDTO> decreaseStock(
+    public ResponseEntity<ProductDTO> baixarEstoque(
             @PathVariable String id,
             @Valid @RequestBody BaixaEstoqueDTO dto) {
-        return ResponseEntity.ok(service.decreaseStock(id, dto.quantidade()));
+        return ResponseEntity.ok(service.baixarEstoque(id, dto.quantidade()));
     }
 
     @PostMapping(value = "/csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
