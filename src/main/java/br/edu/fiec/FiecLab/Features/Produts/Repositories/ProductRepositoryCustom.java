@@ -17,4 +17,6 @@ public interface ProductRepositoryCustom {
             BigDecimal maxPrice,
             LocalDate expDateBefore,
             Pageable pageable);
+    Product decrementStock(String id, int quantidade);
+    Product addRating(String id, double estrelas);
 }

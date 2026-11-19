@@ -21,6 +21,12 @@ public class Product {
     @Field("nome")
     private String name;
 
+    @Field("valor_avaliacao_total")
+    private double valorAvaliacaoTotal;
+
+    @Field("avaliacao_totais")
+    private int avaliacaoTotais;
+
     @Field("descricao")
     private String description;
 

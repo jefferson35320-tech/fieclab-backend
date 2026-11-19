@@ -21,6 +21,8 @@ public record ProductDTO(
         @URL String fispq,
         String imagem,
         @NotNull Categoria categoria,
-        @Valid EstoqueDTO estoque
+        @Valid EstoqueDTO estoque,
+        double valorAvaliacaoTotal,
+        int avaliacaoTotais
 ) {
 }

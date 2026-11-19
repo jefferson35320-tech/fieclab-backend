@@ -1,5 +1,7 @@
 package br.edu.fiec.FiecLab.Features.Produts.Produtscontroller;
 
+import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.DTO.AvaliarDTO;
+import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.DTO.BaixaEstoqueDTO;
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.DTO.ProductDTO;
 import br.edu.fiec.FiecLab.Features.Produts.ProdutsModel.Entities.Categoria;
 import br.edu.fiec.FiecLab.Features.Produts.Services.ProductService;
@@ -54,6 +56,13 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @PostMapping("/{id}/avaliacoes")
+    public ResponseEntity<ProductDTO> rate(
+            @PathVariable String id,
+            @Valid @RequestBody AvaliarDTO dto) {
+        return ResponseEntity.ok(service.rate(id, dto.estrelas()));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<ProductDTO> update(@PathVariable String id, @Valid @RequestBody ProductDTO dto) {
         return ResponseEntity.ok(service.update(id, dto));
@@ -84,6 +93,13 @@ public class ProductController {
 
         ProductDTO updatedProduct = service.uploadImage(id, file);
         return ResponseEntity.ok(updatedProduct);
+    }
+
+    @PatchMapping("/{id}/estoque")
+    public ResponseEntity<ProductDTO> decreaseStock(
+            @PathVariable String id,
+            @Valid @RequestBody BaixaEstoqueDTO dto) {
+        return ResponseEntity.ok(service.decreaseStock(id, dto.quantidade()));
     }
 
     @PostMapping(value = "/csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

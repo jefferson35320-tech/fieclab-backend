@@ -145,6 +145,19 @@ public class ProductService {
         repository.deleteById(id);
     }
 
+    public ProductDTO decreaseStock(String id, int quantidade) {
+        Product updated = repository.decrementStock(id, quantidade);
+
+        if (updated == null) {
+            if (!repository.existsById(id)) {
+                throw new NoSuchElementException("Produto não encontrado: " + id);
+            }
+            throw new IllegalStateException(
+                    "Estoque insuficiente para o produto " + id + " (a quantidade mínima deve ser respeitada)");
+        }
+        return toDTO(updated);
+    }
+
     public Page<ProductDTO> searchDynamic(
             String name,
             Categoria categoria,
@@ -216,8 +229,23 @@ public class ProductService {
                 p.getFispq(),
                 p.getImagem(),
                 p.getCategoria() == null ? null : p.getCategoria().getNome(),
-                estoqueDTO
+                estoqueDTO,
+                p.getValorAvaliacaoTotal(),
+                p.getAvaliacaoTotais()
         );
+    }
+
+    public ProductDTO rate(String id, double estrelas) {
+        // só aceita passos de 0.5
+        if ((estrelas * 2) % 1 != 0) {
+            throw new IllegalArgumentException("A avaliação deve ser em passos de 0.5 (ex.: 3, 3.5, 4).");
+        }
+
+        Product updated = repository.addRating(id, estrelas);
+        if (updated == null) {
+            throw new NoSuchElementException("Produto não encontrado: " + id);
+        }
+        return toDTO(updated);
     }
 
     private void applyDto(Product p, ProductDTO dto) {
