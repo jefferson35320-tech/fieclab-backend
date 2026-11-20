@@ -43,6 +43,8 @@ public class User implements UserDetails {
     @Field("permissao")
     private Role position = Role.CLIENTE;
 
+    private UserStatus status = UserStatus.NOT_CONFIRMED;
+
     private Carrinho carrinho = new Carrinho();
 
     @Override

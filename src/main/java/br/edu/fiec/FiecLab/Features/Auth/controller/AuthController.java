@@ -6,6 +6,9 @@ import br.edu.fiec.FiecLab.Features.Auth.models.DTO.AuthResponseDTO;
 import br.edu.fiec.FiecLab.Features.Auth.models.DTO.GoogleLoginDTO;
 import br.edu.fiec.FiecLab.Features.Auth.service.AuthService;
 import br.edu.fiec.FiecLab.Features.Auth.service.GoogleAuthService;
+import br.edu.fiec.FiecLab.config.mcp.McpSupport;
+import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpToolParam;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -61,5 +64,44 @@ public class AuthController {
     })
     public ResponseEntity<AuthResponseDTO> google(@RequestBody @Valid GoogleLoginDTO dto) {
         return ResponseEntity.ok(googleAuthService.login(dto));
+    }
+
+    // ------------------------------------------------------------------
+    // Ferramentas MCP (expostas para agentes de IA em /mcp)
+    // ------------------------------------------------------------------
+
+    @McpTool(name = "auth_register",
+            description = "Registra um novo usuário (perfil CLIENTE) na FiecLab. Não retorna token: "
+                    + "chame auth_login em seguida para obter o JWT.",
+            annotations = @McpTool.McpAnnotations(title = "Registrar usuário",
+                    readOnlyHint = false, destructiveHint = false, idempotentHint = false, openWorldHint = false))
+    public String mcpRegister(
+            @McpToolParam(description = "Nome completo do usuário") String name,
+            @McpToolParam(description = "E-mail válido e ainda não cadastrado") String email,
+            @McpToolParam(description = "Senha com no mínimo 6 caracteres") String password) {
+        authService.register(McpSupport.validate(new AuthRegisterDTO(name, email, password)));
+        return "Usuário cadastrado com sucesso";
+    }
+
+    @McpTool(name = "auth_login",
+            description = "Autentica com e-mail e senha e retorna o token JWT da API "
+                    + "(use-o no header Authorization: Bearer <token>).",
+            annotations = @McpTool.McpAnnotations(title = "Login",
+                    readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false))
+    public AuthResponseDTO mcpLogin(
+            @McpToolParam(description = "E-mail do usuário") String email,
+            @McpToolParam(description = "Senha do usuário") String password) {
+        return authService.login(McpSupport.validate(new AuthLoginDTO(email, password)));
+    }
+
+    @McpTool(name = "auth_google_login",
+            description = "Troca um idToken do Google (obtido no app) pelo token JWT da API.",
+            annotations = @McpTool.McpAnnotations(title = "Login com Google",
+                    readOnlyHint = false, destructiveHint = false, idempotentHint = true, openWorldHint = true))
+    public AuthResponseDTO mcpGoogleLogin(
+            @McpToolParam(description = "idToken emitido pelo Google Sign-In") String idToken,
+            @McpToolParam(description = "Token do Firebase Cloud Messaging do dispositivo (opcional)",
+                    required = false) String fcmToken) {
+        return googleAuthService.login(McpSupport.validate(new GoogleLoginDTO(idToken, fcmToken)));
     }
 }

@@ -3,6 +3,7 @@ package br.edu.fiec.FiecLab.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -79,6 +80,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/**",
                                 "/error",            // novo
                                 "/images/**",
+                                "/mcp/**",
                                 "/api/files/**",
                                 "/oauth2/**",
                                 "/login/**",
@@ -87,6 +89,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+
+                        // Importação de usuários por CSV: somente SUPER_ADMIN
+                        .requestMatchers(HttpMethod.POST, "/users/csv").hasRole("SUPER_ADMIN")
 
                         .anyRequest().authenticated()
                 )

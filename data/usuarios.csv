@@ -1,0 +1,5 @@
+name,email,password,position,status
+Ana,ana46196@fiec.edu.br,string,CLIENTE,NOT_CONFIRMED
+Luana,luana46127@fiec.edu.br,string,CLIENTE,NOT_CONFIRMED
+Fillipe Silva,fillipe.silva@fiec.edu.br,string,CLIENTE,NOT_CONFIRMED
+Joao,joao46121@fiec.edu.br,string,CLIENTE,NOT_CONFIRMED
