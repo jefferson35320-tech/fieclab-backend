@@ -6,8 +6,34 @@ spring:
   application:
     name: FiecLab
 
+  # Servidor MCP: expõe os métodos @McpTool dos controllers para agentes de IA.
+  # Endpoint: POST /mcp (streamable HTTP). Autenticação: header Authorization: Bearer <JWT>.
+  ai:
+    mcp:
+      server:
+        name: fieclab-mcp
+        version: 0.0.1
+        type: SYNC
+        protocol: STREAMABLE
+        annotation-scanner:
+          enabled: true
+        capabilities:
+          tool: true
+        streamable-http:
+          mcp-endpoint: /mcp
+        instructions: >
+          API da FiecLab (loja de produtos de laboratório). Ferramentas produto_* consultam e mantêm
+          o catálogo e o estoque; pedido_* criam e acompanham pedidos do usuário autenticado
+          (ferramentas marcadas ADMIN exigem perfil administrador); usuario_* gerenciam usuários;
+          auth_* fazem cadastro e login. Datas no formato ISO (yyyy-MM-dd).
+          Confirme com o usuário antes de usar ferramentas destrutivas (excluir/cancelar).
+
   main:
     allow-bean-definition-overriding: true
+
+  # Variáveis locais (ex.: SUPER_ADMIN_EMAIL/SUPER_ADMIN_PASSWORD) em .env.local, fora do git.
+  config:
+    import: optional:file:.env.local[.properties]
 
   data:
     mongodb:
@@ -47,6 +73,9 @@ aws:
     access-key: ${AWS_ACCESS_KEY_ID}
     secret-key: ${AWS_SECRET_ACCESS_KEY}
 app:
+  super-admin:
+    email: ${SUPER_ADMIN_EMAIL:}
+    password: ${SUPER_ADMIN_PASSWORD:}
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
   oauth2:
